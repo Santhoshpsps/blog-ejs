@@ -4,6 +4,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const _ = require('lodash');
+const mongoose = require('mongoose');
 
 
 const homeStartingContent = "Lacus vel facilisis volutpat est velit egestas dui id ornare. Semper auctor neque vitae tempus quam. Sit amet cursus sit amet dictum sit amet justo. Viverra tellus in hac habitasse. Imperdiet proin fermentum leo vel orci porta. Donec ultrices tincidunt arcu non sodales neque sodales ut. Mattis molestie a iaculis at erat pellentesque adipiscing. Magnis dis parturient montes nascetur ridiculus mus mauris vitae ultricies. Adipiscing elit ut aliquam purus sit amet luctus venenatis lectus. Ultrices vitae auctor eu augue ut lectus arcu bibendum at. Odio euismod lacinia at quis risus sed vulputate odio ut. Cursus mattis molestie a iaculis at erat pellentesque adipiscing.";
@@ -12,48 +13,96 @@ const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rho
 
 const app = express();
 
-const posts =[];
+// const posts = [];
 app.set('view engine', 'ejs');
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
 app.use(express.static("public"));
 
-app.get("/",function(req,res){
-  res.render("home",{ hsc:homeStartingContent,posts:posts});
+mongoose.connect("mongodb://localhost:27017/postsDB", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
 });
 
-app.get("/contact",function(req,res){
-  res.render("contact",{con: contactContent});
-});
-app.get("/about",function(req,res){
-  res.render("about",{ab: aboutContent});
+const postSchema = new mongoose.Schema({
+  title: String,
+  body: String
 });
 
-app.get("/compose",function(req,res){
+const Post = new mongoose.model("post",postSchema);
+
+// const post1 = new Post({
+//   title: "Test",
+//   body: "123"
+// });
+
+
+
+app.get("/", function(req, res) {
+
+  Post.find({},function(err,posts){
+    res.render("home",{
+      hsc: homeStartingContent,
+      posts:posts
+    })
+  });
+
+  // res.render("home", {
+  //   hsc: homeStartingContent,
+  //   posts: posts
+  // });
+});
+
+app.get("/contact", function(req, res) {
+  res.render("contact", {
+    con: contactContent
+  });
+});
+app.get("/about", function(req, res) {
+  res.render("about", {
+    ab: aboutContent
+  });
+});
+
+app.get("/compose", function(req, res) {
   res.render("compose");
+
 });
 
-app.get("/posts/:page",function(req,res){
-  for(var i=0;i<posts.length;i++){
-    if(posts[i].title == _.lowerCase(req.params.page)){
-      // console.log("Match Found!")
-      res.render("post",{t:posts[i].title, p: posts[i].textarea});
-    }
+app.get("/posts/:page", function(req, res) {
+  const pageTitle = req.params.page;
 
-  }
+  Post.findOne({title:pageTitle},function(err, posts){
+
+          res.render("post", {
+            t: posts.title,
+            p: posts.body
+          });
+  });
+
 
   // console.log(req.params.page);
 });
 
-app.post("/compose",function(req,res){
-  var post={
-    title: req.body.title,
-    textarea: req.body.textarea
-  };
-  posts.push(post);
+app.post("/compose", function(req, res) {
+  // var post = {
+  //   title: req.body.title,
+  //   textarea: req.body.textarea
+  // };
+  // posts.push(post);
   // console.log(posts);
-
-  res.redirect("/");
+  const post = new Post({
+    title: req.body.title,
+    body: req.body.textarea
+  });
+  post.save(function(err){
+  if(!err){
+    res.redirect("/");
+  }
 });
+
+  });
 
 
 
